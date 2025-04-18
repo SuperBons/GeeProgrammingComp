@@ -110,7 +110,102 @@ class String:
 		return f'"{self.value}"'
 
 
+
+
+def StmtLst(tokens): 
 	
+	stmts = []
+	while tokens.peek() is not None:  
+
+		stmt = Statement(tokens)  
+		if stmt is None: break
+		stmts.append(stmt) 
+
+	return stmts
+
+
+def Statement(tokens): 
+
+    if tok == "while": return parseWhile(tokens)
+    elif tok == "if": return parseIf(tokens)
+    elif tok == "{": return parseBlock(tokens)
+    elif tok.isidentifier():   
+        return parseAssign(tokens)
+	
+
+
+def parseAssign(tokens):
+
+    tok = tokens.peek()
+    if not tok.isidentifier():error(f"Expected identifier, got: {tok}")
+    tokens.next() 
+    var = tok
+
+    match("=")  
+    expr = expression()  
+    match(";")  
+
+    return Assignment(var, expr)  
+
+
+def parseWhile(tokens):
+    """Parse a while loop."""
+    match("while")  # Match the 'while' keyword
+    condition = expression()  # Parse the condition
+    body = block(tokens)  # Parse the block of statements
+    return WhileStmt(condition, body)  # Return a WhileStmt object
+
+
+def if_(tokens):
+    """Parse an if statement."""
+    match("if")  # Match the 'if' keyword
+    cond = expression()  # Parse the condition
+    body = block(tokens)  # Parse the block of statements
+    return IfStmt(cond, body)  # Return an IfStmt object
+
+
+def block(tokens):
+    """Parse a block of statements enclosed in '{' and '}'."""
+    match("{")  # Match the opening '{'
+    stmt_list = StmtList(tokens)  # Parse the list of statements
+    match("}")  # Match the closing '}'
+    return Block(stmt_list)  # Return a Block object
+
+
+# Supporting AST Node Classes
+class WhileStmt:
+    def __init__(self, condition, body):
+        self.condition = condition
+        self.body = body
+
+    def __str__(self):
+        return f"while ({self.condition}) {self.body}"
+
+
+class IfStmt:
+    def __init__(self, condition, body):
+        self.condition = condition
+        self.body = body
+
+    def __str__(self):
+        return f"if ({self.condition}) {self.body}"
+
+
+class Block:
+    def __init__(self, statements):
+        self.statements = statements
+
+    def __str__(self):
+        return "{ " + " ".join(str(stmt) for stmt in self.statements) + " }"
+
+
+
+
+
+
+
+	
+
 
 
 
@@ -193,8 +288,8 @@ def parseStmtList(  ):
 
 def parse( text ) :
 	global tokens
-	tokens = Lexer( text )
-	# expr = addExpr( )
+	tokens = Lexer(text)
+	#expr = addExpr( )
 	#print (str(expr))
 	#     Or:
 	stmtlist = parseStmtList( )
