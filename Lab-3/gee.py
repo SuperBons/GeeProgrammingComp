@@ -1,4 +1,3 @@
-
 import re, sys, string
 
 debug = True
@@ -35,29 +34,124 @@ def error( msg ):
 # The "parse" function. This builds a list of tokens from the input string,
 # and then hands it to a recursive descent parser for the PAL grammar.
 
+
+
+
+#beggining of my code lmao 
+
+
+def expresion(): 
+
+	# for debuggin
+
+	if debug: print("expr")
+
+	le = andExpr()
+	tok = tokens.peek
+	while tok == "or": 
+		tokens.next() 
+		ri = andExpr()
+		left = BinaryExpr(tok, le, ri)
+		tok = tokens.peek() 
+	return left
+
+
+def andExpr(): 
+
+# use this for debuggin 
+	if debug: print("andexpr")
+
+	le = relationalExpr() # parse the first part of expr
+	tok = tokens.peek() # check next token
+	while tok == "and": 
+		tokens.next() 
+		right = relationalExpr() 
+		left = BinaryExpr(tok, le, right)
+		tok = tokens.peek()
+	return left
+
+
+
+def relationalExpr(): 
+	#for debuggin lmao
+	if debug: print("relationalExpr")
+
+	le = addExpr() 
+	tok = tokens.peek() 
+
+    # Check if the token is a relational operator
+	if tok in ["<", ">", "==", "!=", "<=", ">="]:
+		tokens.next()  # Consume the operator
+		right = addExpr()  # Parse the second part of the expression
+		left = BinaryExpr(tok, left, right)  # Combine into a BinaryExpr
+	return left		
+
+
+#building classes for ident(VarRef)
+
+
+class VarRef:
+ 
+      def __init__(self, name):  # Fix the constructor name and argument
+        self.name = name
+
+      def __str__(self): 
+        return self.name
+	
+
+#build string 
+
+class String: 
+	
+	def __init__(self,name): 
+		self.value = name
+
+	def __str__(self): 
+		return f'"{self.value}"'
+
+
+	
+
+
+
+
+
+# end of my code 
+
+
+
 def match(matchtok):
 	tok = tokens.peek( )
 	if (tok != matchtok): error("Expecting "+ matchtok)
 	tokens.next( )
 	return tok
 	
-def factor( ):
-	"""factor     = number |  '(' expression ')' """
+def factor():
+    """factor = number | string | identifier | '(' expression ')'"""
+    tok = tokens.peek()
 
-	tok = tokens.peek( )
-	if debug: print ("Factor: ", tok)
-	if re.match(Lexer.number, tok):
-		expr = Number(tok)
-		tokens.next( )
-		return expr
-	if tok == "(":
-		tokens.next( )  # or match( tok )
-		expr = addExpr( )
-		tokens.peek( )
-		tok = match(")")
-		return expr
-	error("Invalid operand")
-	return
+    if debug: print("Parsing factor:", tok)
+
+    if tok.isdigit():  
+        tokens.next()
+        return Number(int(tok))   
+
+    elif tok.startswith('"') and tok.endswith('"'):   
+        tokens.next()
+        return String(tok[1:-1])  
+	
+
+    elif tok.isidentifier():
+        tokens.next()
+        return VarRef(tok) 
+
+    elif tok == '(': 
+        tokens.next() 
+        expr = expression() 
+        match(')') 
+        return expr
+
+     
 
 
 def term( ):
@@ -92,19 +186,19 @@ def parseStmtList(  ):
 	""" gee = { Statement } """
 	tok = tokens.peek( )
 	while tok is not None:
-                # need to store each statement in a list
+		# need to store each statement in a list
 		ast = parseStmt(tokens)
-                print(str(ast))
+		print(str(ast))
 	return ast
 
 def parse( text ) :
 	global tokens
 	tokens = Lexer( text )
-	expr = addExpr( )
-	print (str(expr))
+	# expr = addExpr( )
+	#print (str(expr))
 	#     Or:
-	# stmtlist = parseStmtList( )
-	# print str(stmtlist)
+	stmtlist = parseStmtList( )
+	print (str(stmtlist))
 	return
 
 

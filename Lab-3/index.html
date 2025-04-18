@@ -49,13 +49,13 @@ You are free to modify the grammar provided you do not
 change the syntax of Gee.</p>
 <p>  Specially, you must:
 <ol>
-   <li> Build parse routines for the expression nonterminals:<br>
+   <li>  done Build parse routines for the expression nonterminals:<br>
    expression, andExpr, relationalExpr<br>
    (as specified in the grammar).
    Note that currently addExpr is called in 2 places:
    factor and parse.</li>
 
-   <li>Build classes for ident (VarRef) and string (String)
+   <li> done Build classes for ident (VarRef) and string (String)
    and add the necessary logic to factor.</li>
 
    <li> Modify function "parse( text )" by commenting out (or deleting) the code that calls addExpr and its associated print (i.e., lines 3-4 in the function body), and uncomment the call to parseStmtList and its print (i.e., lines 6-7 in the function body). After doing this the expression tests will no longer work.</li>
