@@ -40,51 +40,53 @@ def error( msg ):
 #beggining of my code lmao 
 
 
-def expresion(): 
+def expression():
+    """expression = andExpr { "or" andExpr }"""
+    if debug: print("expr")
 
-	# for debuggin
+    left = andExpr()  # Parse the first andExpr
+    tok = tokens.peek()  # Peek at the next token
 
-	if debug: print("expr")
+    while tok == "or":
+        tokens.next()  # Consume the "or" token
+        right = andExpr()  # Parse the next andExpr
+        left = BinaryExpr(tok, left, right)  # Combine into a BinaryExpr
+        tok = tokens.peek()  # Peek at the next token
 
-	le = andExpr()
-	tok = tokens.peek
-	while tok == "or": 
-		tokens.next() 
-		ri = andExpr()
-		left = BinaryExpr(tok, le, ri)
-		tok = tokens.peek() 
-	return left
-
-
-def andExpr(): 
-
-# use this for debuggin 
-	if debug: print("andexpr")
-
-	le = relationalExpr() # parse the first part of expr
-	tok = tokens.peek() # check next token
-	while tok == "and": 
-		tokens.next() 
-		right = relationalExpr() 
-		left = BinaryExpr(tok, le, right)
-		tok = tokens.peek()
-	return left
+    return left
 
 
+def andExpr():
+    """andExpr = relationalExpr { "and" relationalExpr }"""
+    if debug: print("andexpr")
 
-def relationalExpr(): 
-	#for debuggin lmao
-	if debug: print("relationalExpr")
+    # Parse the first relationalExpr and assign it to `left`
+    left = relationalExpr()
+    tok = tokens.peek()  # Peek at the next token
 
-	le = addExpr() 
-	tok = tokens.peek() 
+    # Process all "and" operators
+    while tok == "and":
+        tokens.next()  # Consume the "and" token
+        right = relationalExpr()  # Parse the next relationalExpr
+        left = BinaryExpr(tok, left, right)  # Combine into a BinaryExpr
+        tok = tokens.peek()  # Peek at the next token
 
-    # Check if the token is a relational operator
-	if tok in ["<", ">", "==", "!=", "<=", ">="]:
-		tokens.next()  # Consume the operator
-		right = addExpr()  # Parse the second part of the expression
-		left = BinaryExpr(tok, left, right)  # Combine into a BinaryExpr
-	return left		
+    return left
+
+
+def relationalExpr():
+    """relationalExpr = addExpr [ relation addExpr ]"""
+    if debug: print("relationalExpr")
+
+    left = addExpr()  # Parse the first addExpr
+    tok = tokens.peek()  # Peek at the next token
+
+    if tok in ["<", ">", "==", "!=", "<=", ">="]:
+        tokens.next()  # Consume the relational operator
+        right = addExpr()  # Parse the next addExpr
+        return BinaryExpr(tok, left, right)  # Combine into a BinaryExpr
+
+    return left		
 
 
 #building classes for ident(VarRef)
@@ -110,109 +112,107 @@ class String:
 		return f'"{self.value}"'
 
 
+# AST node classes for statements
+class Assignment:
+    def __init__(self, name, expr):
+        self.name = name
+        self.expr = expr
+    def __str__(self):
+        return f"{self.name} = {self.expr};\n"
 
+class IfStatement:
+    def __init__(self, cond, thenStmt, elseStmt=None):
+        self.cond = cond
+        self.thenStmt = thenStmt
+        self.elseStmt = elseStmt
+    def __str__(self):
+        s = f"if ({self.cond}) {self.thenStmt}"
+        if self.elseStmt:
+            s += f"else {self.elseStmt}"
+        return s
 
-def StmtLst(tokens): 
-	
-	stmts = []
-	while tokens.peek() is not None:  
+class WhileStatement:
+    def __init__(self, cond, body):
+        self.cond = cond
+        self.body = body
+    def __str__(self):
+        return f"while ({self.cond}) {self.body}"
 
-		stmt = Statement(tokens)  
-		if stmt is None: break
-		stmts.append(stmt) 
+class BlockStatement:
+    def __init__(self, stmts):
+        self.stmts = stmts
+    def __str__(self):
+        return "{\n" + "".join(str(s) for s in self.stmts) + "}\n"
 
-	return stmts
+class StmtList:
+    def __init__(self, stmts):
+        self.stmts = stmts
+    def __str__(self):
+        return "".join(str(s) for s in self.stmts)
 
+# Recursive descent routines for Gee statements
+def parseStmtList():
+    stmts = []
+    while tokens.peek() is not None:
+        stmt = parseStatement()
+        if stmt is None:
+            break
+        stmts.append(stmt)
+    return StmtList(stmts)
 
-def Statement(tokens): 
-
-    if tok == "while": return parseWhile(tokens)
-    elif tok == "if": return parseIf(tokens)
-    elif tok == "{": return parseBlock(tokens)
-    elif tok.isidentifier():   
-        return parseAssign(tokens)
-	
-
-
-def parseAssign(tokens):
-
+def parseStatement():
     tok = tokens.peek()
-    if not tok.isidentifier():error(f"Expected identifier, got: {tok}")
-    tokens.next() 
-    var = tok
+    if tok is None:
+        return None
+    if tok.isidentifier():
+        return parseAssign()
+    elif tok == 'if':
+        return parseIf()
+    elif tok == 'while':
+        return parseWhile()
+    elif tok == '@':
+        return parseBlock()
+    else:
+        error("Unexpected token in Statement: " + str(tok))
 
-    match("=")  
-    expr = expression()  
-    match(";")  
+def parseAssign():
+    name = tokens.peek()
+    tokens.next()
+    match('=')
+    expr = expression()
+    match(';')
+    return Assignment(name, expr)
 
-    return Assignment(var, expr)  
+def parseIf():
+    match('if')
+    match('(')
+    cond = expression()
+    match(')')
+    thenStmt = parseStatement()
+    elseStmt = None
+    if tokens.peek() == 'else':
+        tokens.next()
+        elseStmt = parseStatement()
+    return IfStatement(cond, thenStmt, elseStmt)
 
+def parseWhile():
+    match('while')
+    match('(')
+    cond = expression()
+    match(')')
+    body = parseStatement()
+    return WhileStatement(cond, body)
 
-def parseWhile(tokens):
-    """Parse a while loop."""
-    match("while")  # Match the 'while' keyword
-    condition = expression()  # Parse the condition
-    body = block(tokens)  # Parse the block of statements
-    return WhileStmt(condition, body)  # Return a WhileStmt object
-
-
-def if_(tokens):
-    """Parse an if statement."""
-    match("if")  # Match the 'if' keyword
-    cond = expression()  # Parse the condition
-    body = block(tokens)  # Parse the block of statements
-    return IfStmt(cond, body)  # Return an IfStmt object
-
-
-def block(tokens):
-    """Parse a block of statements enclosed in '{' and '}'."""
-    match("{")  # Match the opening '{'
-    stmt_list = StmtList(tokens)  # Parse the list of statements
-    match("}")  # Match the closing '}'
-    return Block(stmt_list)  # Return a Block object
-
-
-# Supporting AST Node Classes
-class WhileStmt:
-    def __init__(self, condition, body):
-        self.condition = condition
-        self.body = body
-
-    def __str__(self):
-        return f"while ({self.condition}) {self.body}"
-
-
-class IfStmt:
-    def __init__(self, condition, body):
-        self.condition = condition
-        self.body = body
-
-    def __str__(self):
-        return f"if ({self.condition}) {self.body}"
-
-
-class Block:
-    def __init__(self, statements):
-        self.statements = statements
-
-    def __str__(self):
-        return "{ " + " ".join(str(stmt) for stmt in self.statements) + " }"
-
-
-
-
-
-
-
-	
-
-
-
-
-
-
-# end of my code 
-
+def parseBlock():
+    match('@')
+    stmts = []
+    while tokens.peek() != '~':
+        stmt = parseStatement()
+        if stmt is None:
+            break
+        stmts.append(stmt)
+    match('~')
+    return BlockStatement(stmts)
 
 
 def match(matchtok):
@@ -277,21 +277,9 @@ def addExpr( ):
 		tok = tokens.peek( )
 	return left
 
-def parseStmtList(  ):
-	""" gee = { Statement } """
-	tok = tokens.peek( )
-	while tok is not None:
-		# need to store each statement in a list
-		ast = parseStmt(tokens)
-		print(str(ast))
-	return ast
-
 def parse( text ) :
 	global tokens
 	tokens = Lexer(text)
-	#expr = addExpr( )
-	#print (str(expr))
-	#     Or:
 	stmtlist = parseStmtList( )
 	print (str(stmtlist))
 	return
@@ -326,7 +314,7 @@ class Lexer :
 	
 	special = r"\(|\)|\[|\]|,|:|;|@|~|;|\$"
 	relational = "<=?|>=?|==?|!="
-	arithmetic = "\+|\-|\*|/"
+	arithmetic = r"\+|\-|\*|/"
 	#char = r"'."
 	string = r"'[^']*'" + "|" + r'"[^"]*"'
 	number = r"\-?\d+(?:\.\d+)?"
@@ -334,7 +322,7 @@ class Lexer :
 	#idStart = r"a-zA-Z"
 	#idChar = idStart + r"0-9"
 	#identifier = "[" + idStart + "][" + idChar + "]*"
-	identifier = "[a-zA-Z]\w*"
+	identifier = r"[a-zA-Z]\w*"
 	lexRules = literal + "|" + special + "|" + relational + "|" + arithmetic + "|" + identifier
 	
 	def __init__( self, text ) :
